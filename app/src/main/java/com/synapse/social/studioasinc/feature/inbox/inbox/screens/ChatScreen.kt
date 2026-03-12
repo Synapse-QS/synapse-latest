@@ -73,7 +73,10 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.res.stringResource
 import com.synapse.social.studioasinc.R
 import com.synapse.social.studioasinc.feature.inbox.inbox.ChatViewModel
+import com.synapse.social.studioasinc.feature.inbox.inbox.components.ChatShimmer
 import com.synapse.social.studioasinc.feature.shared.theme.Spacing
+import com.synapse.social.studioasinc.feature.shared.theme.StatusOnline
+import com.synapse.social.studioasinc.feature.shared.theme.StatusRead
 import com.synapse.social.studioasinc.shared.domain.model.chat.DisappearingMode
 import com.synapse.social.studioasinc.shared.domain.model.chat.Message
 import com.synapse.social.studioasinc.shared.domain.model.chat.MessageType
@@ -126,6 +129,9 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val context = LocalContext.current
 
+    // TODO: Replace direct upload with preview screen
+    //  Current: Immediately uploads and sends media
+    //  Needed: Show preview screen first (see TODO above visualMediaLauncher)
     val handleFileSelection = { uri: Uri?, type: String ->
         uri?.let {
             val contentResolver = context.contentResolver
@@ -150,6 +156,13 @@ fun ChatScreen(
         }
     }
 
+    // TODO: Implement image message with preview/edit screen (similar to WhatsApp)
+    //  - Create a dedicated screen/composable for image preview before sending
+    //  - Allow caption editing (text input overlay)
+    //  - Add image editing capabilities (crop, rotate, filters) using CropImageContract like CreatePostScreen
+    //  - Reference: CreatePostScreen.kt for media handling pattern (lines ~40-150)
+    //  - Flow: Pick image -> Show preview screen with edit tools -> Add caption -> Send
+    //  - Consider reusing MediaUploadHandler from createpost package
     val visualMediaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -209,12 +222,14 @@ fun ChatScreen(
                             // Participant avatar
                             AsyncImage(
                                 model = participantProfile?.avatar,
-                                contentDescription = null,
+                                contentDescription = "Profile picture",
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                placeholder = painterResource(R.drawable.ic_person),
+                                error = painterResource(R.drawable.ic_person)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
@@ -233,7 +248,7 @@ fun ChatScreen(
                                 }
                                 val statusColor = when {
                                     typingStatus != null && typingStatus!!.isTyping -> MaterialTheme.colorScheme.primary
-                                    participantProfile?.status?.name == "ONLINE" -> Color(0xFF4CAF50)
+                                    participantProfile?.status?.name == "ONLINE" -> StatusOnline
                                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                                 }
                                 Text(
@@ -307,12 +322,13 @@ fun ChatScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(top = paddingValues.calculateTopPadding())
                 .imePadding()
         ) {
             when {
                 isLoading && messages.isEmpty() -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    ChatShimmer(modifier = Modifier.fillMaxSize())
                 }
                 error != null && messages.isEmpty() -> {
                     Column(
@@ -338,7 +354,7 @@ fun ChatScreen(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surface),
+                            .background(MaterialTheme.colorScheme.background),
                         // Extra bottom padding so last messages aren't hidden behind the floating input
                         contentPadding = PaddingValues(
                             start = Spacing.Medium,
@@ -1038,7 +1054,7 @@ fun MessageBubble(
                                 else -> "✓"
                             },
                             fontSize = 11.sp,
-                            color = if (message.deliveryStatus == com.synapse.social.studioasinc.shared.domain.model.chat.DeliveryStatus.READ) Color(0xFF4FC3F7)
+                            color = if (message.deliveryStatus == com.synapse.social.studioasinc.shared.domain.model.chat.DeliveryStatus.READ) StatusRead
                                     else contentColor.copy(alpha = 0.6f)
                         )
                     }

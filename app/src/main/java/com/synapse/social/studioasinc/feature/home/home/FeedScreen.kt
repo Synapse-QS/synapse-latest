@@ -208,10 +208,15 @@ fun FeedScreen(
                     )
                 }
 
+                // TODO: Implement "What's on your mind?" quick post area
+                // - Add a Facebook-like composer card below StoryTray
+                // - Show user avatar + "What's on your mind?" placeholder
+                // - Tap to navigate to CreatePostScreen
+                // - Include quick action buttons (Photo, Video, Feeling/Activity)
 
                 items(
                     count = posts.itemCount,
-
+                    key = posts.itemKey { it.id },
                     contentType = posts.itemContentType { it.itemType }
                 ) { index ->
                     val feedItem = posts[index]
